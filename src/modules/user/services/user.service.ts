@@ -8,12 +8,16 @@ import {
 import { USER_REPOSITORY } from 'src/common/constants/tokens';
 import { IUserRepository } from 'src/core/interfaces/user-repository.interface';
 import { SignupDto } from 'src/modules/auth/dto/signup.dto';
+import { FileService } from 'src/modules/file/file.service';
 import { CreateUserDto } from '../dto/create-user.dto';
+import { UpdatePasswordDto } from '../dto/update-password-dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
 
 @Injectable()
 export class UserService {
   constructor(
     @Inject(USER_REPOSITORY) private userRepository: IUserRepository,
+    private fileService: FileService,
   ) {}
 
   async get(id: string) {
@@ -55,6 +59,30 @@ export class UserService {
       return createdUser;
     } catch (error) {
       throw new BadRequestException('Cannot create user', error.message);
+    }
+  }
+
+  async update(dto: UpdateUserDto, userId: string, avatarFile: string) {
+    try {
+      const avatarUrl = this.fileService.createFile(avatarFile);
+      const user = await this.userRepository.get(userId);
+      this.fileService.removeFile(user.avatarUrl);
+      const updatedUser = await this.userRepository.update(userId, {
+        ...dto,
+        avatarUrl,
+      });
+      return updatedUser;
+    } catch (error) {
+      throw new BadRequestException('Cannot update user', error.message);
+    }
+  }
+
+  async updatePassword(dto: UpdatePasswordDto, userId: string) {
+    try {
+      const updatedUser = await this.userRepository.updatePassword(userId, dto);
+      return updatedUser;
+    } catch (error) {
+      throw new BadRequestException('Cannot update password', error.message);
     }
   }
 }

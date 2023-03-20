@@ -1,6 +1,20 @@
-import { Controller, Get, Param, Post, Body, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Body,
+  Req,
+  UseInterceptors,
+  CacheInterceptor,
+  Put,
+  UploadedFile,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
 import { CreateUserDto } from '../dto/create-user.dto';
+import { UpdatePasswordDto } from '../dto/update-password-dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
 
 import { UserService } from '../services/user.service';
 
@@ -9,7 +23,7 @@ import { UserService } from '../services/user.service';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
-
+  @UseInterceptors(CacheInterceptor)
   @Get('self')
   async getSelf(@Req() req) {
     return this.userService.get(req.user.id);
@@ -33,5 +47,22 @@ export class UserController {
   @Post('')
   async create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
+  }
+  @UseInterceptors(FileInterceptor('avatarUrl'))
+  @Put('update')
+  async update(
+    @Req() req,
+    @Body() updateUserDto: UpdateUserDto,
+    @UploadedFile() avatarUrl,
+  ) {
+    return this.userService.update(updateUserDto, req.user.id, avatarUrl);
+  }
+
+  @Put('update/password')
+  async updatePassword(
+    @Req() req,
+    @Body() updatePasswordDto: UpdatePasswordDto,
+  ) {
+    return this.userService.updatePassword(updatePasswordDto, req.user.id);
   }
 }
