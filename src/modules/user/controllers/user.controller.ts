@@ -9,12 +9,15 @@ import {
   CacheInterceptor,
   Put,
   UploadedFile,
+  StreamableFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
+import { BucketNames, MinioService } from 'src/modules/minio/minio.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdatePasswordDto } from '../dto/update-password-dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import { NoAuth } from 'src/common/decorators/no-auth.decorator';
 
 import { UserService } from '../services/user.service';
 
@@ -22,7 +25,11 @@ import { UserService } from '../services/user.service';
 @ApiTags('user')
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly minioService: MinioService,
+  ) {}
+
   @UseInterceptors(CacheInterceptor)
   @Get('self')
   async getSelf(@Req() req) {
@@ -39,23 +46,9 @@ export class UserController {
     return this.userService.get(id);
   }
 
-  @Get('')
-  async getAll() {
-    return this.userService.getAll();
-  }
-
-  @Post('')
-  async create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
-  }
-  @UseInterceptors(FileInterceptor('avatarUrl'))
   @Put('update')
-  async update(
-    @Req() req,
-    @Body() updateUserDto: UpdateUserDto,
-    @UploadedFile() avatarUrl,
-  ) {
-    return this.userService.update(updateUserDto, req.user.id, avatarUrl);
+  async update(@Req() req, @Body() updateUserDto: UpdateUserDto) {
+    return this.userService.update(updateUserDto, req.user.id);
   }
 
   @Put('update/password')
@@ -65,4 +58,27 @@ export class UserController {
   ) {
     return this.userService.updatePassword(updatePasswordDto, req.user.id);
   }
+
+  @Put('update/avatar')
+  @UseInterceptors(FileInterceptor('avatar'))
+  async updateAvatar(@Req() req, @UploadedFile() avatar: Express.Multer.File) {
+    return await this.userService.updateAvatar(avatar, req.user.id);
+  }
+  @NoAuth()
+  @Get(':id/avatar')
+  async getAvatar(@Param('id') id: string): Promise<StreamableFile> {
+    console.log(typeof id);
+
+    return this.userService.getAvatar(id);
+  }
+  @Get('')
+  async getAll() {
+    return this.userService.getAll();
+  }
+
+  @Post('')
+  async create(@Body() createUserDto: CreateUserDto) {
+    return this.userService.create(createUserDto);
+  }
 }
+//

@@ -4,11 +4,10 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-
 import { USER_REPOSITORY } from 'src/common/constants/tokens';
 import { IUserRepository } from 'src/core/interfaces/user-repository.interface';
 import { SignupDto } from 'src/modules/auth/dto/signup.dto';
-import { FileService } from 'src/modules/file/file.service';
+import { BucketNames, MinioService } from 'src/modules/minio/minio.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdatePasswordDto } from '../dto/update-password-dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -17,7 +16,7 @@ import { UpdateUserDto } from '../dto/update-user.dto';
 export class UserService {
   constructor(
     @Inject(USER_REPOSITORY) private userRepository: IUserRepository,
-    private fileService: FileService,
+    private minioService: MinioService,
   ) {}
 
   async get(id: string) {
@@ -62,16 +61,9 @@ export class UserService {
     }
   }
 
-  async update(dto: UpdateUserDto, userId: string, avatarFile: string) {
+  async update(dto: UpdateUserDto, userId: string) {
     try {
-      const avatarUrl = this.fileService.createFile(avatarFile);
-      const user = await this.userRepository.get(userId);
-      this.fileService.removeFile(user.avatarUrl);
-      const updatedUser = await this.userRepository.update(userId, {
-        ...dto,
-        avatarUrl,
-      });
-      return updatedUser;
+      return await this.userRepository.update(userId, dto);
     } catch (error) {
       throw new BadRequestException('Cannot update user', error.message);
     }
@@ -84,5 +76,28 @@ export class UserService {
     } catch (error) {
       throw new BadRequestException('Cannot update password', error.message);
     }
+  }
+
+  async updateAvatar(avatar: Express.Multer.File, userId: string) {
+    if (!avatar.mimetype.includes('image')) {
+      throw new BadRequestException('Avatar must be image');
+    }
+    const user = await this.userRepository.get(userId);
+    if (user.avatarUrl) {
+      this.minioService.deleteFile(user.avatarUrl, BucketNames.avatars);
+    }
+    const avatarUrl = await this.minioService.uploadFile(
+      avatar,
+      BucketNames.avatars,
+    );
+    const updatedUser = await this.userRepository.updateAvatar(
+      userId,
+      avatarUrl,
+    );
+    return updatedUser;
+  }
+  async getAvatar(userId: string) {
+    const { avatarUrl } = await this.userRepository.get(userId);
+    return await this.minioService.downloadFile(avatarUrl, BucketNames.avatars);
   }
 }

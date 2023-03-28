@@ -3,8 +3,8 @@ import { AuthModule } from './auth/auth.module';
 
 import { ChatModule } from './chat/chat.module';
 import { ConferenceRoomModule } from './conference-room/conference-room.module';
-import { FileModule } from './file/file.module';
 import { MessageModule } from './message/message.module';
+import { MinioModule } from './minio/minio.module';
 import { UserModule } from './user/user.module';
 import { AppWebsocketModule } from './websocket/websocket.module';
 
@@ -16,7 +16,7 @@ import { AppWebsocketModule } from './websocket/websocket.module';
     ConferenceRoomModule,
     AuthModule,
     AppWebsocketModule,
-    FileModule,
+    MinioModule,
   ],
   exports: [
     UserModule,
@@ -25,7 +25,9 @@ import { AppWebsocketModule } from './websocket/websocket.module';
     ConferenceRoomModule,
     AuthModule,
     AppWebsocketModule,
-    FileModule,
+    MinioModule,
   ],
 })
 export class ModulesModule {}
+//
+//
